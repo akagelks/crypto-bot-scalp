@@ -23,6 +23,39 @@ def enviar_telegram(mensagem):
     except:
         pass
 
+def verificar_comandos_telegram():
+    # Verifica se há novas mensagens no Telegram
+    token = os.getenv('TELEGRAM_TOKEN')
+    url = f'https://api.telegram.org/bot{token}/getUpdates'
+    try:
+        response = requests.get(url, timeout=5)
+        updates = response.json()
+        if updates['ok']:
+            for update in updates['result']:
+                if 'message' in update and 'text' in update['message']:
+                    comando = update['message']['text']
+                    chat_id = update['message']['chat']['id']
+                    if comando == '/test':
+                        # Responde ao comando /test
+                        mensagem = (
+                            "🟢 Bot Online 🟢\n"
+                            "Status: Funcionando corretamente.\n"
+                            f"Última execução: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                        )
+                        enviar_telegram_chat_id(chat_id, mensagem)
+    except Exception as e:
+        print(f"Erro ao verificar comandos do Telegram: {e}")
+
+def enviar_telegram_chat_id(chat_id, mensagem):
+    # Envia mensagem para um chat específico
+    token = os.getenv('TELEGRAM_TOKEN')
+    url = f'https://api.telegram.org/bot{token}/sendMessage'
+    payload = {'chat_id': chat_id, 'text': mensagem}
+    try:
+        requests.post(url, data=payload, timeout=5)
+    except:
+        pass
+
 def checar_sinal(candles):
     close = [c[4] for c in candles]
     volume = [c[5] for c in candles]
@@ -84,6 +117,9 @@ def main():
     
     while True:
         try:
+            # Verifica comandos do Telegram
+            verificar_comandos_telegram()
+
             # Verifica se já tem posição aberta
             posicoes_abertas = []
             for par in pares:
