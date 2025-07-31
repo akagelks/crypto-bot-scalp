@@ -108,22 +108,47 @@ def main():
                         continue
 
                     if checar_sinal(candles):
-                        # === Entrada com $1 ===
-                        exchange.set_leverage(leverage, par)
+                        # === Calcular valores da entrada ===
                         markets = exchange.load_markets()
                         market = markets[par]
                         price = candles[-1][4]
                         amount = position_size / price * leverage
                         amount = amount / market['contractSize']
+                        tp_price = price * 0.97  # Take Profit 3% abaixo
 
-                        order = exchange.create_order(par, 'market', 'sell', amount)
-                        msg = f"🚨 SHORT ABERTO\nPar: {par}\nPreço: ${price:.2f}\nMargem: ${position_size}, x{leverage}"
+                        # === Verificar saldo ===
+                        balance = exchange.fetch_balance()
+                        free_balance = float(balance['USDT']['free'])
+                        if free_balance < position_size:
+                            # Notificação de simulação de entrada (sem saldo)
+                            msg = (
+                                f"✅ Simulação de Entrada ✅\n"
+                                f"Par: {par}\n"
+                                f"Preço: ${price:.2f}\n"
+                                f"Margem: ${position_size}\n"
+                                f"Alavancagem: x{leverage}\n"
+                                f"Take Profit: ${tp_price:.2f}\n\n"
+                                f"⚠️ Nota: Saldo insuficiente para abrir posição."
+                            )
+                            enviar_telegram(msg)
+                            print(msg)
+                            break  # Sai do loop após simulação
+
+                        # === Criar ordem real ===
+                        order = exchange.create_order(par, 'market', 'sell', amount, params={'takeProfit': tp_price})
+                        msg = (
+                            f"✅ Entrada Realizada ✅\n"
+                            f"Par: {par}\n"
+                            f"Preço: ${price:.2f}\n"
+                            f"Margem: ${position_size}\n"
+                            f"Alavancagem: x{leverage}\n"
+                            f"Take Profit: ${tp_price:.2f}"
+                        )
                         enviar_telegram(msg)
                         print(msg)
 
-                        # Cooldown de 5 minutos após entrada
-                        time.sleep(300)
-                        break  # Sai do loop após entrada
+                        # Sai do loop após entrada
+                        break
 
                 except Exception as e:
                     print(f"Erro no par {par}: {e}")
