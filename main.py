@@ -7,7 +7,6 @@ def conectar_bitget():
     return ccxt.bitget({
         'apiKey': os.getenv('BITGET_API_KEY'),
         'secret': os.getenv('BITGET_SECRET'),
-        'password': os.getenv('BITGET_PASSWORD'),
         'options': {'defaultType': 'swap'}
     })
 
@@ -66,46 +65,63 @@ def calcular_ema(prices, period):
 
 def main():
     exchange = conectar_bitget()
-    symbol = os.getenv('SYMBOL', 'SOL/USDT:USDT')
+    
+    # Pares TOP para movimentos bruscos (SOL, DOGE, WIF, FET, BONK)
+    pares = ['SOL/USDT:USDT', 'DOGE/USDT:USDT', 'WIF/USDT:USDT', 'FET/USDT:USDT', 'BONK/USDT:USDT']
+    
+    # Variáveis fixas
+    leverage = 20
+    position_size = 1  # $1 por trade
+    
     while True:
         try:
-            candles = exchange.fetch_ohlcv(symbol, '3m', limit=20)
-            if len(candles) < 10:
-                time.sleep(10)
+            # Verifica se já tem posição aberta
+            posicoes_abertas = []
+            for par in pares:
+                try:
+                    positions = exchange.fetch_positions([par])
+                    for pos in positions:
+                        if pos['side'] != 'none' and pos['contracts'] > 0:
+                            posicoes_abertas.append(par)
+                except:
+                    continue
+            
+            if posicoes_abertas:
+                print(f"Já tem posição aberta em {posicoes_abertas}")
+                time.sleep(60)
                 continue
 
-            if checar_sinal(candles):
-                # Verifica se já tem posição
+            # Checa cada par
+            for par in pares:
                 try:
-                    positions = exchange.fetch_positions([symbol])
-                    position = [p for p in positions if p['side'] != 'none'][0]
-                    if position['contracts'] > 0:
-                        print("Já tem posição aberta")
-                        time.sleep(60)
+                    candles = exchange.fetch_ohlcv(par, '3m', limit=20)
+                    if len(candles) < 10:
                         continue
-                except:
-                    pass
 
-                # === Entrada com $1 ===
-                leverage = int(os.getenv('LEVERAGE', 20))
-                exchange.set_leverage(leverage, symbol)
-                markets = exchange.load_markets()
-                market = markets[symbol]
-                price = candles[-1][4]
-                notional = float(os.getenv('POSITION_SIZE', 1))  # $1
-                amount = notional / price * leverage
-                amount = amount / market['contractSize']
+                    if checar_sinal(candles):
+                        # === Entrada com $1 ===
+                        exchange.set_leverage(leverage, par)
+                        markets = exchange.load_markets()
+                        market = markets[par]
+                        price = candles[-1][4]
+                        amount = position_size / price * leverage
+                        amount = amount / market['contractSize']
 
-                order = exchange.create_order(symbol, 'market', 'sell', amount)
-                msg = f"🚨 SHORT ABERTO\nPar: {symbol}\nPreço: ${price:.2f}\nMargem: ${notional}, x{leverage}"
-                enviar_telegram(msg)
-                print(msg)
+                        order = exchange.create_order(par, 'market', 'sell', amount)
+                        msg = f"🚨 SHORT ABERTO\nPar: {par}\nPreço: ${price:.2f}\nMargem: ${position_size}, x{leverage}"
+                        enviar_telegram(msg)
+                        print(msg)
 
-                # Cooldown
-                time.sleep(300)
+                        # Cooldown de 5 minutos após entrada
+                        time.sleep(300)
+                        break  # Sai do loop após entrada
+
+                except Exception as e:
+                    print(f"Erro no par {par}: {e}")
+                    continue
 
         except Exception as e:
-            print(f"Erro: {e}")
+            print(f"Erro geral: {e}")
             time.sleep(10)
 
 if __name__ == "__main__":
