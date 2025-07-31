@@ -2,8 +2,8 @@
 import ccxt, os, time, requests
 from datetime import datetime
 
-# === Configurações da Bitget ===
 def conectar_bitget():
+    # Chaves de API são configuradas no Railway (não estão no código)
     return ccxt.bitget({
         'apiKey': os.getenv('BITGET_API_KEY'),
         'secret': os.getenv('BITGET_SECRET'),
@@ -11,29 +11,26 @@ def conectar_bitget():
         'options': {'defaultType': 'swap'}
     })
 
-# === Enviar mensagem no Telegram ===
 def enviar_telegram(mensagem):
+    # Token e ID do Telegram são configurados no Railway (não estão no código)
     token = os.getenv('TELEGRAM_TOKEN')
     chat_id = os.getenv('TELEGRAM_CHAT_ID')
     if not token or not chat_id:
-        print("Telegram não configurado")
         return
     url = f'https://api.telegram.org/bot{token}/sendMessage'
     payload = {'chat_id': chat_id, 'text': mensagem}
     try:
         requests.post(url, data=payload, timeout=5)
     except:
-        print("Falha ao enviar Telegram")
+        pass
 
-# === Lógica do IMPULSO-BEAR ===
 def checar_sinal(candles):
     close = [c[4] for c in candles]
     volume = [c[5] for c in candles]
     high = [c[2] for c in candles]
     low = [c[3] for c in candles]
 
-    # Condições
-    pump = close[-1] > close[-6] * 1.12  # +12% em 30m
+    pump = close[-1] > close[-6] * 1.12
     avg_vol = sum(volume[-11:-1]) / 10
     volume_alto = volume[-1] > 2.5 * avg_vol
     rsi = calcular_rsi(close, 5)
@@ -67,7 +64,6 @@ def calcular_ema(prices, period):
         ema.append((price - ema[-1]) * multiplier + ema[-1])
     return ema
 
-# === Loop principal ===
 def main():
     exchange = conectar_bitget()
     symbol = os.getenv('SYMBOL', 'SOL/USDT:USDT')
