@@ -66,8 +66,17 @@ def calcular_ema(prices, period):
 def main():
     exchange = conectar_bitget()
     
-    # Pares TOP para movimentos bruscos (SOL, DOGE, WIF, FET, BONK)
-    pares = ['SOL/USDT:USDT', 'DOGE/USDT:USDT', 'WIF/USDT:USDT', 'FET/USDT:USDT', 'BONK/USDT:USDT']
+    # Pares confirmados e operáveis na Bitget
+    pares = [
+        'SOL/USDT:USDT',  # Explosivo, correlacionado com ETH/BTC
+        'DOGE/USDT:USDT',  # Memecoin clássico, fácil scalp
+        'FET/USDT:USDT',  # Narrativa de IA → correção técnica
+        'APT/USDT:USDT',  # Altcoin emergente → spikes frequentes
+        'WIF/USDT:USDT',  # Novo memecoin explosivo
+        'ETH/USDT:USDT',  # Segundo maior cripto por market cap
+        'BTC/USDT:USDT',  # Maior cripto por market cap
+        'MATIC/USDT:USDT'  # Blockchain escalável → movimentos técnicos
+    ]
     
     # Variáveis fixas
     leverage = 20
