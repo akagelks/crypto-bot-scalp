@@ -23,18 +23,19 @@ def enviar_telegram(mensagem):
     except:
         pass
 
-def verificar_comandos_telegram():
+def verificar_comandos_telegram(ultimo_update_id):
     # Verifica se há novas mensagens no Telegram
     token = os.getenv('TELEGRAM_TOKEN')
     url = f'https://api.telegram.org/bot{token}/getUpdates'
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, params={'offset': ultimo_update_id + 1}, timeout=5)
         updates = response.json()
         if updates['ok']:
             for update in updates['result']:
                 if 'message' in update and 'text' in update['message']:
                     comando = update['message']['text']
                     chat_id = update['message']['chat']['id']
+                    update_id = update['update_id']
                     if comando == '/test':
                         # Responde ao comando /test
                         mensagem = (
@@ -43,8 +44,11 @@ def verificar_comandos_telegram():
                             f"Última execução: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                         )
                         enviar_telegram_chat_id(chat_id, mensagem)
+                        return update_id
+        return ultimo_update_id
     except Exception as e:
         print(f"Erro ao verificar comandos do Telegram: {e}")
+        return ultimo_update_id
 
 def enviar_telegram_chat_id(chat_id, mensagem):
     # Envia mensagem para um chat específico
@@ -114,11 +118,12 @@ def main():
     # Variáveis fixas
     leverage = 20
     position_size = 1  # $1 por trade
+    ultimo_update_id = 0  # Variável para controlar o último comando recebido no Telegram
     
     while True:
         try:
             # Verifica comandos do Telegram
-            verificar_comandos_telegram()
+            ultimo_update_id = verificar_comandos_telegram(ultimo_update_id)
 
             # Verifica se já tem posição aberta
             posicoes_abertas = []
