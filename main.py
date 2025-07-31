@@ -132,8 +132,9 @@ def main():
                     continue
             
             if posicoes_abertas:
+                # Apenas log local, sem enviar mensagem ao Telegram
                 print(f"Já tem posição aberta em {posicoes_abertas}")
-                time.sleep(60)
+                time.sleep(10)  # Espera 10 segundos antes de verificar novamente
                 continue
 
             # Checa cada par
@@ -189,6 +190,9 @@ def main():
                 except Exception as e:
                     print(f"Erro no par {par}: {e}")
                     continue
+
+            # Espera 10 segundos antes de verificar novamente
+            time.sleep(10)
 
         except Exception as e:
             print(f"Erro geral: {e}")
